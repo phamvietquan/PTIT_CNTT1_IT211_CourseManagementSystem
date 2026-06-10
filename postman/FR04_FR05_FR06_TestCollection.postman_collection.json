@@ -1,0 +1,1382 @@
+{
+	"info": {
+		"_postman_id": "cms-fr04-fr05-fr06-tests",
+		"name": "CourseManagementSystem - FR04, FR05, FR06 Tests",
+		"description": "Bộ test collection cho:\n- FR-04: Đăng ký tài khoản Sinh viên mới (10 test cases)\n- FR-05: Quản lý Người dùng & Lớp học – Admin (5 test cases)\n- FR-06: Đăng ký tham gia khóa học – Student (10 test cases)\n\nHướng dẫn: Chạy lần lượt từ trên xuống dưới để đảm bảo các biến môi trường được set đúng.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "adminToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "studentToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "studentUsername",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "studentUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "lecturerUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "courseId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "enrollmentId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "createdUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "createdCourseId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "🔧 Setup - Login Admin",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Setup: Admin login thành công', function () {",
+							"    pm.response.to.have.status(200);",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.success).to.be.true;",
+							"    pm.expect(jsonData.data.accessToken).to.be.a('string');",
+							"    pm.collectionVariables.set('adminToken', jsonData.data.accessToken);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/auth/login",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "auth", "login"]
+				}
+			}
+		},
+		{
+			"name": "══════════════════════════════════════",
+			"item": [],
+			"description": "Separator"
+		},
+		{
+			"name": "FR-04: Đăng ký tài khoản Sinh viên mới (10 tests)",
+			"item": [
+				{
+					"name": "TC01 - Đăng ký thành công với thông tin hợp lệ",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var timestamp = Date.now();",
+									"pm.collectionVariables.set('studentUsername', 'student_test_' + timestamp);",
+									"pm.variables.set('dynamicEmail', 'student_test_' + timestamp + '@ptit.edu.vn');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC01: Đăng ký sinh viên thành công - Status 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('FR04-TC01: Response body chứa thông tin user', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('thành công');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('username');",
+									"    pm.expect(jsonData.data).to.have.property('email');",
+									"    pm.expect(jsonData.data).to.have.property('fullName');",
+									"    pm.expect(jsonData.data.role).to.eql('STUDENT');",
+									"    pm.expect(jsonData.data.active).to.be.true;",
+									"    pm.collectionVariables.set('studentUserId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{studentUsername}}\",\n    \"password\": \"Student@123\",\n    \"email\": \"{{dynamicEmail}}\",\n    \"fullName\": \"Nguyễn Văn Test\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "TC02 - Đăng ký thất bại: Username đã tồn tại",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC02: Trùng username trả về 409 Conflict', function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('FR04-TC02: Thông báo lỗi trùng username', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"    pm.expect(jsonData.message.toLowerCase()).to.include('username');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{studentUsername}}\",\n    \"password\": \"Student@123\",\n    \"email\": \"unique_email_tc02@ptit.edu.vn\",\n    \"fullName\": \"Trùng Username\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "TC03 - Đăng ký thất bại: Email đã tồn tại",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Sử dụng email đã đăng ký ở TC01",
+									"pm.variables.set('existingEmail', pm.collectionVariables.get('studentUsername').replace('student_test_', 'student_test_') + '@ptit.edu.vn');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC03: Trùng email trả về 409 Conflict', function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('FR04-TC03: Thông báo lỗi trùng email', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"    pm.expect(jsonData.message.toLowerCase()).to.include('email');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"unique_user_tc03\",\n    \"password\": \"Student@123\",\n    \"email\": \"{{existingEmail}}\",\n    \"fullName\": \"Trùng Email\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "TC04 - Đăng ký thất bại: Username để trống",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC04: Username trống trả về 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR04-TC04: Thông báo lỗi validation username', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"\",\n    \"password\": \"Student@123\",\n    \"email\": \"tc04@ptit.edu.vn\",\n    \"fullName\": \"Username Trống\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "TC05 - Đăng ký thất bại: Password quá ngắn (< 6 ký tự)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC05: Password ngắn trả về 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR04-TC05: Thông báo lỗi validation password', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"user_tc05\",\n    \"password\": \"123\",\n    \"email\": \"tc05@ptit.edu.vn\",\n    \"fullName\": \"Password Ngắn\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "TC06 - Đăng ký thất bại: Email không hợp lệ",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC06: Email sai format trả về 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR04-TC06: Thông báo lỗi validation email', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"user_tc06\",\n    \"password\": \"Student@123\",\n    \"email\": \"email-khong-hop-le\",\n    \"fullName\": \"Email Sai Format\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "TC07 - Đăng ký thất bại: Thiếu trường fullName",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC07: Thiếu fullName trả về 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR04-TC07: Thông báo lỗi validation fullName', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"user_tc07\",\n    \"password\": \"Student@123\",\n    \"email\": \"tc07@ptit.edu.vn\",\n    \"fullName\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "TC08 - Đăng ký thất bại: Username quá ngắn (< 3 ký tự)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC08: Username < 3 ký tự trả về 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR04-TC08: Thông báo lỗi validation username size', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"ab\",\n    \"password\": \"Student@123\",\n    \"email\": \"tc08@ptit.edu.vn\",\n    \"fullName\": \"Username Quá Ngắn\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "TC09 - Đăng ký thất bại: Body rỗng hoàn toàn",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC09: Body rỗng trả về 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR04-TC09: Response có success = false', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "TC10 - Xác nhận role STUDENT và login sau đăng ký",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR04-TC10: Login student mới đăng ký thành công', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('FR04-TC10: Token được trả về và role = STUDENT', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.accessToken).to.be.a('string');",
+									"    pm.expect(jsonData.data.role).to.eql('STUDENT');",
+									"    pm.expect(jsonData.data.username).to.eql(pm.collectionVariables.get('studentUsername'));",
+									"    pm.collectionVariables.set('studentToken', jsonData.data.accessToken);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{studentUsername}}\",\n    \"password\": \"Student@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "FR-05: Quản lý Người dùng & Lớp học - Admin (5 tests)",
+			"item": [
+				{
+					"name": "TC01 - Admin tạo người dùng mới (LECTURER)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var timestamp = Date.now();",
+									"pm.variables.set('newLecturerUsername', 'lecturer_' + timestamp);",
+									"pm.variables.set('newLecturerEmail', 'lecturer_' + timestamp + '@ptit.edu.vn');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR05-TC01: Tạo user LECTURER thành công - Status 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('FR05-TC01: Thông tin user trả về đúng', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.role).to.eql('LECTURER');",
+									"    pm.expect(jsonData.data.active).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.collectionVariables.set('lecturerUserId', jsonData.data.id);",
+									"    pm.collectionVariables.set('createdUserId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{newLecturerUsername}}\",\n    \"password\": \"Lecturer@123\",\n    \"email\": \"{{newLecturerEmail}}\",\n    \"fullName\": \"Giảng viên Test FR05\",\n    \"role\": \"LECTURER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "users"]
+						}
+					}
+				},
+				{
+					"name": "TC02 - Admin lấy danh sách users (phân trang + tìm kiếm)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR05-TC02: Lấy danh sách users thành công - Status 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('FR05-TC02: Response có cấu trúc phân trang đúng', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('content');",
+									"    pm.expect(jsonData.data).to.have.property('page');",
+									"    pm.expect(jsonData.data).to.have.property('size');",
+									"    pm.expect(jsonData.data).to.have.property('totalElements');",
+									"    pm.expect(jsonData.data).to.have.property('totalPages');",
+									"    pm.expect(jsonData.data).to.have.property('last');",
+									"    pm.expect(jsonData.data.content).to.be.an('array');",
+									"    pm.expect(jsonData.data.size).to.eql(5);",
+									"    pm.expect(jsonData.data.page).to.eql(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/users?page=0&size=5&keyword=test",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "users"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "5"
+								},
+								{
+									"key": "keyword",
+									"value": "test"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "TC03 - Admin cập nhật thông tin user",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR05-TC03: Cập nhật user thành công - Status 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('FR05-TC03: Thông tin user được cập nhật đúng', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.fullName).to.eql('Giảng viên Updated');",
+									"    pm.expect(jsonData.data.email).to.include('updated');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Giảng viên Updated\",\n    \"email\": \"updated_lecturer@ptit.edu.vn\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/users/{{createdUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "users", "{{createdUserId}}"]
+						}
+					}
+				},
+				{
+					"name": "TC04 - Admin tạo khóa học mới & quản lý lớp học",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var timestamp = Date.now();",
+									"pm.variables.set('courseCode', 'IT' + timestamp.toString().slice(-6));"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR05-TC04: Tạo khóa học thành công - Status 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('FR05-TC04: Thông tin khóa học trả về đúng', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data.courseName).to.eql('Lập trình Java nâng cao');",
+									"    pm.expect(jsonData.data.maxStudents).to.eql(30);",
+									"    pm.expect(jsonData.data.active).to.be.true;",
+									"    pm.collectionVariables.set('courseId', jsonData.data.id);",
+									"    pm.collectionVariables.set('createdCourseId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"courseCode\": \"{{courseCode}}\",\n    \"courseName\": \"Lập trình Java nâng cao\",\n    \"description\": \"Khóa học Java nâng cao cho sinh viên CNTT - Test FR05\",\n    \"maxStudents\": 30,\n    \"lecturerId\": {{lecturerUserId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/courses",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "courses"]
+						}
+					}
+				},
+				{
+					"name": "TC05 - Admin lấy danh sách khóa học (phân trang + tìm kiếm)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR05-TC05: Lấy danh sách khóa học thành công - Status 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('FR05-TC05: Response có cấu trúc phân trang đúng', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.have.property('content');",
+									"    pm.expect(jsonData.data).to.have.property('page');",
+									"    pm.expect(jsonData.data).to.have.property('size');",
+									"    pm.expect(jsonData.data).to.have.property('totalElements');",
+									"    pm.expect(jsonData.data).to.have.property('totalPages');",
+									"    pm.expect(jsonData.data.content).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('FR05-TC05: Tìm kiếm keyword trả về kết quả', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data.totalElements).to.be.at.least(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/admin/courses?page=0&size=10&keyword=Java",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "admin", "courses"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								},
+								{
+									"key": "keyword",
+									"value": "Java"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "FR-06: Đăng ký tham gia khóa học - Student (10 tests)",
+			"item": [
+				{
+					"name": "TC01 - Student đăng ký khóa học thành công",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC01: Đăng ký khóa học thành công - Status 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('FR06-TC01: Response chứa thông tin enrollment đúng', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.message).to.include('thành công');",
+									"    pm.expect(jsonData.data).to.have.property('id');",
+									"    pm.expect(jsonData.data).to.have.property('studentId');",
+									"    pm.expect(jsonData.data).to.have.property('studentName');",
+									"    pm.expect(jsonData.data).to.have.property('courseId');",
+									"    pm.expect(jsonData.data).to.have.property('courseCode');",
+									"    pm.expect(jsonData.data).to.have.property('courseName');",
+									"    pm.expect(jsonData.data).to.have.property('enrolledAt');",
+									"    pm.expect(jsonData.data.courseId).to.eql(parseInt(pm.collectionVariables.get('courseId')));",
+									"    pm.collectionVariables.set('enrollmentId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{studentToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"courseId\": {{courseId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				},
+				{
+					"name": "TC02 - Student đăng ký trùng khóa học (đã đăng ký rồi)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC02: Đăng ký trùng trả về 409 Conflict', function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"",
+									"pm.test('FR06-TC02: Thông báo lỗi đã đăng ký', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"    pm.expect(jsonData.message).to.include('đã đăng ký');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{studentToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"courseId\": {{courseId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				},
+				{
+					"name": "TC03 - Student xem danh sách khóa học đã đăng ký",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC03: Lấy danh sách enrollment thành công - Status 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('FR06-TC03: Danh sách chứa khóa học đã đăng ký', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"    pm.expect(jsonData.data.length).to.be.at.least(1);",
+									"    ",
+									"    var enrolledCourseIds = jsonData.data.map(e => e.courseId);",
+									"    pm.expect(enrolledCourseIds).to.include(parseInt(pm.collectionVariables.get('courseId')));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{studentToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				},
+				{
+					"name": "TC04 - Đăng ký khóa học không tồn tại (courseId sai)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC04: Course không tồn tại trả về 404', function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test('FR06-TC04: Thông báo lỗi không tìm thấy course', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{studentToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"courseId\": 999999\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				},
+				{
+					"name": "TC05 - Đăng ký khóa học: courseId null (validation)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC05: courseId null trả về 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR06-TC05: Thông báo lỗi validation', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{studentToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"courseId\": null\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				},
+				{
+					"name": "TC06 - Đăng ký khóa học không có token (Unauthorized)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC06: Không có token trả về 401 Unauthorized', function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"courseId\": {{courseId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				},
+				{
+					"name": "TC07 - Đăng ký khóa học bằng token Admin (Forbidden)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC07: Admin token không truy cập được student endpoint - Status 403', function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"courseId\": {{courseId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				},
+				{
+					"name": "TC08 - Đăng ký khóa học đã bị vô hiệu hóa",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Tạo khóa học inactive trước khi test",
+									"var baseUrl = pm.collectionVariables.get('baseUrl');",
+									"var adminToken = pm.collectionVariables.get('adminToken');",
+									"var lecturerId = pm.collectionVariables.get('lecturerUserId');",
+									"var timestamp = Date.now();",
+									"",
+									"// Step 1: Tạo khóa học mới",
+									"pm.sendRequest({",
+									"    url: baseUrl + '/api/v1/admin/courses',",
+									"    method: 'POST',",
+									"    header: {",
+									"        'Content-Type': 'application/json',",
+									"        'Authorization': 'Bearer ' + adminToken",
+									"    },",
+									"    body: {",
+									"        mode: 'raw',",
+									"        raw: JSON.stringify({",
+									"            courseCode: 'DIS' + timestamp.toString().slice(-6),",
+									"            courseName: 'Khóa học Disabled Test',",
+									"            description: 'Test khóa học bị vô hiệu hóa',",
+									"            maxStudents: 10,",
+									"            lecturerId: parseInt(lecturerId)",
+									"        })",
+									"    }",
+									"}, function (err, res) {",
+									"    var newCourseId = res.json().data.id;",
+									"    pm.variables.set('inactiveCourseId', newCourseId);",
+									"    ",
+									"    // Step 2: Deactivate khóa học",
+									"    pm.sendRequest({",
+									"        url: baseUrl + '/api/v1/admin/courses/' + newCourseId,",
+									"        method: 'DELETE',",
+									"        header: {",
+									"            'Authorization': 'Bearer ' + adminToken",
+									"        }",
+									"    }, function (err2, res2) {",
+									"        console.log('Đã deactivate khóa học: ' + newCourseId);",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC08: Đăng ký khóa học inactive trả về 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR06-TC08: Thông báo lỗi khóa học bị vô hiệu hóa', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"    pm.expect(jsonData.message).to.include('vô hiệu hóa');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{studentToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"courseId\": {{inactiveCourseId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				},
+				{
+					"name": "TC09 - Đăng ký khóa học đã đầy (maxStudents)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Tạo khóa học với maxStudents = 1 và fill bằng 1 student khác",
+									"var baseUrl = pm.collectionVariables.get('baseUrl');",
+									"var adminToken = pm.collectionVariables.get('adminToken');",
+									"var lecturerId = pm.collectionVariables.get('lecturerUserId');",
+									"var timestamp = Date.now();",
+									"",
+									"// Step 1: Tạo khóa học maxStudents = 1",
+									"pm.sendRequest({",
+									"    url: baseUrl + '/api/v1/admin/courses',",
+									"    method: 'POST',",
+									"    header: {",
+									"        'Content-Type': 'application/json',",
+									"        'Authorization': 'Bearer ' + adminToken",
+									"    },",
+									"    body: {",
+									"        mode: 'raw',",
+									"        raw: JSON.stringify({",
+									"            courseCode: 'FUL' + timestamp.toString().slice(-6),",
+									"            courseName: 'Khóa học Full Test',",
+									"            description: 'Test khóa học đã đầy',",
+									"            maxStudents: 1,",
+									"            lecturerId: parseInt(lecturerId)",
+									"        })",
+									"    }",
+									"}, function (err, res) {",
+									"    var fullCourseId = res.json().data.id;",
+									"    pm.variables.set('fullCourseId', fullCourseId);",
+									"    ",
+									"    // Step 2: Register a filler student",
+									"    pm.sendRequest({",
+									"        url: baseUrl + '/api/auth/register',",
+									"        method: 'POST',",
+									"        header: { 'Content-Type': 'application/json' },",
+									"        body: {",
+									"            mode: 'raw',",
+									"            raw: JSON.stringify({",
+									"                username: 'filler_' + timestamp,",
+									"                password: 'Filler@123',",
+									"                email: 'filler_' + timestamp + '@ptit.edu.vn',",
+									"                fullName: 'Filler Student'",
+									"            })",
+									"        }",
+									"    }, function (err2, res2) {",
+									"        // Step 3: Login as filler student",
+									"        pm.sendRequest({",
+									"            url: baseUrl + '/api/auth/login',",
+									"            method: 'POST',",
+									"            header: { 'Content-Type': 'application/json' },",
+									"            body: {",
+									"                mode: 'raw',",
+									"                raw: JSON.stringify({",
+									"                    username: 'filler_' + timestamp,",
+									"                    password: 'Filler@123'",
+									"                })",
+									"            }",
+									"        }, function (err3, res3) {",
+									"            var fillerToken = res3.json().data.accessToken;",
+									"            // Step 4: Enroll filler student to fill the course",
+									"            pm.sendRequest({",
+									"                url: baseUrl + '/api/v1/student/enrollments',",
+									"                method: 'POST',",
+									"                header: {",
+									"                    'Content-Type': 'application/json',",
+									"                    'Authorization': 'Bearer ' + fillerToken",
+									"                },",
+									"                body: {",
+									"                    mode: 'raw',",
+									"                    raw: JSON.stringify({ courseId: fullCourseId })",
+									"                }",
+									"            }, function (err4, res4) {",
+									"                console.log('Khóa học đã đầy: ' + fullCourseId);",
+									"            });",
+									"        });",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC09: Đăng ký khóa học đầy trả về 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR06-TC09: Thông báo lỗi khóa học đã đầy', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"    pm.expect(jsonData.message).to.include('đầy');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{studentToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"courseId\": {{fullCourseId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				},
+				{
+					"name": "TC10 - Đăng ký khóa học: body rỗng",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('FR06-TC10: Body rỗng trả về 400 Bad Request', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('FR06-TC10: Response có success = false', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.false;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{studentToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/student/enrollments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "student", "enrollments"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
