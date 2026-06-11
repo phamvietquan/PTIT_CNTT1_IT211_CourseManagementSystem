@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Assignment {
+public class Assignment {// bài tập
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

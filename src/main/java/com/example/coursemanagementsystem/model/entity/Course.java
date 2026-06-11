@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Course {
+public class Course { // khoá học
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Submission {
+public class Submission {// nộp bài tập
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

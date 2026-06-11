@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LectureMaterial {
+public class LectureMaterial {// tài liệu học tập
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

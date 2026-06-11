@@ -24,7 +24,7 @@ public class StudentEnrollmentController {
     public ResponseEntity<ApiResponse<EnrollmentResponse>> enrollCourse(
             @Valid @RequestBody EnrollCourseRequest request,
             Authentication authentication) {
-        String username = authentication.getName();
+        String username = authentication.getName(); 
         EnrollmentResponse enrollment = enrollmentService.enrollCourse(username, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Đăng ký khóa học thành công", enrollment));
