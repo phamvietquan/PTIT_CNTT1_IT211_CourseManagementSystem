@@ -50,12 +50,6 @@ public class User { // người dùng
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "password_reset_token")
-    private String passwordResetToken;
-
-    @Column(name = "password_reset_token_expiry")
-    private LocalDateTime passwordResetTokenExpiry;
-
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Enrollment> enrollments = new ArrayList<>();

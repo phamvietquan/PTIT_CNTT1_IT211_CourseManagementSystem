@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
-import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -156,36 +155,6 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
-    }
-
-    @Transactional
-    public String forgotPassword(ForgotPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "User", "email", request.getEmail()));
-
-        String resetToken = UUID.randomUUID().toString();
-        user.setPasswordResetToken(resetToken);
-        user.setPasswordResetTokenExpiry(LocalDateTime.now().plusMinutes(30));
-        userRepository.save(user);
-
-        return resetToken;
-    }
-
-    @Transactional
-    public void resetPassword(ResetPasswordRequest request) {
-        User user = userRepository.findByPasswordResetToken(request.getToken())
-                .orElseThrow(() -> new BusinessException(
-                        "Token reset mật khẩu không hợp lệ"));
-
-        if (user.getPasswordResetTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new BusinessException("Token reset mật khẩu đã hết hạn");
-        }
-
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        user.setPasswordResetToken(null);
-        user.setPasswordResetTokenExpiry(null);
         userRepository.save(user);
     }
 }
