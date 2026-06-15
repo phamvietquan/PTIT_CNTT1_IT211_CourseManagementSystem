@@ -3,6 +3,7 @@ package com.example.coursemanagementsystem.service;
 import com.example.coursemanagementsystem.exception.BusinessException;
 import com.example.coursemanagementsystem.exception.DuplicateResourceException;
 import com.example.coursemanagementsystem.exception.ResourceNotFoundException;
+import com.example.coursemanagementsystem.model.dto.request.SubmitAssignmentRequest;
 import com.example.coursemanagementsystem.model.dto.response.SubmissionResponse;
 import com.example.coursemanagementsystem.model.entity.*;
 import com.example.coursemanagementsystem.repository.AssignmentRepository;
@@ -10,19 +11,11 @@ import com.example.coursemanagementsystem.repository.EnrollmentRepository;
 import com.example.coursemanagementsystem.repository.SubmissionRepository;
 import com.example.coursemanagementsystem.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,18 +33,14 @@ public class SubmissionService {
     @Autowired
     private EnrollmentRepository enrollmentRepository;
 
-    @Value("${app.upload.dir:uploads}")
-    private String uploadDir;
-
     @Transactional
-    public SubmissionResponse submitAssignment(String username, Long assignmentId,
-                                               String githubUrl, MultipartFile file) {
+    public SubmissionResponse submitAssignment(String username, SubmitAssignmentRequest request) {
         User student = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
 
-        Assignment assignment = assignmentRepository.findById(assignmentId)
+        Assignment assignment = assignmentRepository.findById(request.getAssignmentId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Assignment", "id", assignmentId));
+                        "Assignment", "id", request.getAssignmentId()));
 
         if (!enrollmentRepository.existsByStudentIdAndCourseId(
                 student.getId(), assignment.getCourse().getId())) {
@@ -60,14 +49,14 @@ public class SubmissionService {
         }
 
         if (submissionRepository.existsByAssignmentIdAndStudentId(
-                assignmentId, student.getId())) {
+                request.getAssignmentId(), student.getId())) {
             throw new DuplicateResourceException(
                     "Bạn đã nộp bài cho assignment này rồi");
         }
 
-        if ((githubUrl == null || githubUrl.isBlank()) && (file == null || file.isEmpty())) {
-            throw new BusinessException(
-                    "Vui lòng cung cấp link GitHub hoặc tải lên file bài nộp");
+        String githubUrl = request.getGithubUrl();
+        if (githubUrl == null || githubUrl.isBlank()) {
+            throw new BusinessException("Vui lòng cung cấp link GitHub");
         }
 
         SubmissionStatus status = SubmissionStatus.SUBMITTED;
@@ -84,12 +73,6 @@ public class SubmissionService {
                 .submittedAt(LocalDateTime.now())
                 .build();
 
-        if (file != null && !file.isEmpty()) {
-            String savedFileName = saveFile(file, "submissions");
-            submission.setFileUrl("/uploads/submissions/" + savedFileName);
-            submission.setFileName(file.getOriginalFilename());
-        }
-
         Submission saved = submissionRepository.save(submission);
         return SubmissionResponse.fromEntity(saved);
     }
@@ -105,20 +88,5 @@ public class SubmissionService {
                 .collect(Collectors.toList());
     }
 
-    private String saveFile(MultipartFile file, String subDir) {
-        try {
-            Path uploadPath = Paths.get(uploadDir, subDir);
-            Files.createDirectories(uploadPath);
 
-            String originalFileName = file.getOriginalFilename();
-            String uniqueFileName = UUID.randomUUID() + "_" + originalFileName;
-
-            Path filePath = uploadPath.resolve(uniqueFileName);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            return uniqueFileName;
-        } catch (IOException e) {
-            throw new BusinessException("Không thể lưu file: " + e.getMessage());
-        }
-    }
 }

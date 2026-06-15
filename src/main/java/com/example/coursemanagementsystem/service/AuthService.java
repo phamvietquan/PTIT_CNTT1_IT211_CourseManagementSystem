@@ -104,6 +104,10 @@ public class AuthService {
             throw new BadCredentialsException("Refresh token không hợp lệ hoặc đã hết hạn");
         }
 
+        if (!"REFRESH".equals(jwtProvider.extractTokenType(oldRefreshToken))) {
+            throw new BadCredentialsException("Token không phải là refresh token");
+        }
+
         if (tokenBlacklistRepository.existsByToken(oldRefreshToken)) {
             throw new BadCredentialsException("Refresh token đã bị thu hồi");
         }

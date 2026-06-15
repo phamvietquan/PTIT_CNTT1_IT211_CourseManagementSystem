@@ -1,15 +1,15 @@
 package com.example.coursemanagementsystem.controller;
 
+import com.example.coursemanagementsystem.model.dto.request.SubmitAssignmentRequest;
 import com.example.coursemanagementsystem.model.dto.response.ApiResponse;
 import com.example.coursemanagementsystem.model.dto.response.SubmissionResponse;
 import com.example.coursemanagementsystem.service.SubmissionService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -20,15 +20,12 @@ public class StudentSubmissionController {
     @Autowired
     private SubmissionService submissionService;
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping
     public ResponseEntity<ApiResponse<SubmissionResponse>> submitAssignment(
-            @RequestParam("assignmentId") Long assignmentId,
-            @RequestParam(value = "githubUrl", required = false) String githubUrl,
-            @RequestParam(value = "file", required = false) MultipartFile file,
+            @Valid @RequestBody SubmitAssignmentRequest request,
             Authentication authentication) {
         String username = authentication.getName();
-        SubmissionResponse response = submissionService.submitAssignment(
-                username, assignmentId, githubUrl, file);
+        SubmissionResponse response = submissionService.submitAssignment(username, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Nộp bài thành công", response));
     }

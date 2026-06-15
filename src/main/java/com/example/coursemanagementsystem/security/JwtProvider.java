@@ -25,24 +25,25 @@ public class JwtProvider {
     private long refreshExpirationMs;
 
     public String generateToken(UserDetails userDetails) {
-        return buildToken(userDetails.getUsername(), jwtExpirationMs);
+        return buildToken(userDetails.getUsername(), jwtExpirationMs, "ACCESS");
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
-        return buildToken(userDetails.getUsername(), refreshExpirationMs);
+        return buildToken(userDetails.getUsername(), refreshExpirationMs, "REFRESH");
     }
 
     public String generateToken(String username) {
-        return buildToken(username, jwtExpirationMs);
+        return buildToken(username, jwtExpirationMs, "ACCESS");
     }
 
     public String generateRefreshToken(String username) {
-        return buildToken(username, refreshExpirationMs);
+        return buildToken(username, refreshExpirationMs, "REFRESH");
     }
 
-    private String buildToken(String subject, long expirationMs) {
+    private String buildToken(String subject, long expirationMs, String tokenType) {
         return Jwts.builder()
                 .subject(subject)
+                .claim("type", tokenType)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(getSigningKey())
@@ -51,6 +52,10 @@ public class JwtProvider {
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public String extractTokenType(String token) {
+        return extractClaim(token, claims -> claims.get("type", String.class));
     }
 
     public Date getExpirationDateFromToken(String token) {
