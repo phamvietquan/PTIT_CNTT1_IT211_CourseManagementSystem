@@ -1,0 +1,202 @@
+﻿# =============================================================
+# Workflow: CD - Trien khai da moi truong (Staging & Production)
+# Staging  : kich hoat khi push vao nhanh develop
+# Production: kich hoat khi push vao nhanh main
+#              -> yeu cau phe duyet thu cong (Required reviewers)
+# =============================================================
+
+name: CD - Multi-Environment Deploy
+
+on:
+  push:
+    branches:
+      - develop   # Khi push vao develop -> deploy Staging
+      - main      # Khi push vao main    -> deploy Production
+
+  # Cho phep chay thu cong tu tab Actions
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Moi truong can deploy (staging / production)'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+# Bien dung chung cho ca workflow
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  # ============================================================
+  # JOB 1: Deploy len moi truong STAGING
+  #   - Chi chay khi push vao nhanh "develop"
+  #     hoac chon "staging" trong workflow_dispatch
+  #   - Khong yeu cau phe duyet, tu dong deploy
+  # ============================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+
+    # Gan voi GitHub Environment "staging"
+    environment:
+      name: staging
+      url: https://staging.example.com
+
+    # Chi chay job nay khi:
+    #   - Push vao develop, HOAC
+    #   - Chay thu cong voi input la "staging"
+    if: |
+      github.ref == 'refs/heads/develop' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+
+    steps:
+      # ----------------------------------------------------------
+      # Buoc 1: Checkout ma nguon
+      # ----------------------------------------------------------
+      - name: Checkout ma nguon
+        uses: actions/checkout@v5
+
+      # ----------------------------------------------------------
+      # Buoc 2: Hien thi thong tin moi truong deploy
+      # ----------------------------------------------------------
+      - name: Hien thi thong tin Staging Deploy
+        run: |
+          echo "============================================"
+          echo " DEPLOYING TO: STAGING ENVIRONMENT"
+          echo " Branch : ${{ github.ref_name }}"
+          echo " Commit : ${{ github.sha }}"
+          echo " Actor  : ${{ github.actor }}"
+          echo " Image  : ${{ env.IMAGE_NAME }}:staging"
+          echo "============================================"
+
+      # ----------------------------------------------------------
+      # Buoc 3: Dang nhap vao GitHub Container Registry
+      # ----------------------------------------------------------
+      - name: Dang nhap vao GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ----------------------------------------------------------
+      # Buoc 4: Thiet lap Docker Buildx
+      # ----------------------------------------------------------
+      - name: Thiet lap Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ----------------------------------------------------------
+      # Buoc 5: Build va Push image voi tag "staging"
+      # ----------------------------------------------------------
+      - name: Build va Push Docker Image (Staging)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:staging
+            ${{ env.IMAGE_NAME }}:staging-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ----------------------------------------------------------
+      # Buoc 6: Mo phong deploy len server Staging
+      #   (Thay bang SSH / kubectl / Helm trong thuc te)
+      # ----------------------------------------------------------
+      - name: Mo phong deploy len Staging server
+        run: |
+          echo "[STAGING] Pulling image: ${{ env.IMAGE_NAME }}:staging"
+          echo "[STAGING] Stopping old container..."
+          echo "[STAGING] Starting new container..."
+          echo "[STAGING] Health check: OK"
+          echo "[STAGING] Deploy THANH CONG!"
+
+  # ============================================================
+  # JOB 2: Deploy len moi truong PRODUCTION
+  #   - Chi chay khi push vao nhanh "main"
+  #     hoac chon "production" trong workflow_dispatch
+  #   - YEU CAU PHE DUYET THU CONG (configured in GitHub Environments)
+  #   - Job nay se dung o buoc "Waiting for review" cho den khi
+  #     nguoi co quyen bam "Approve and deploy"
+  # ============================================================
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    # Gan voi GitHub Environment "production"
+    # Environment nay da bat "Required reviewers" tren GitHub Settings
+    environment:
+      name: production
+      url: https://api.prod.example.com
+
+    # Chi chay job nay khi:
+    #   - Push vao main, HOAC
+    #   - Chay thu cong voi input la "production"
+    if: |
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+
+    steps:
+      # ----------------------------------------------------------
+      # Buoc 1: Checkout ma nguon
+      # ----------------------------------------------------------
+      - name: Checkout ma nguon
+        uses: actions/checkout@v5
+
+      # ----------------------------------------------------------
+      # Buoc 2: Hien thi thong tin moi truong deploy
+      # ----------------------------------------------------------
+      - name: Hien thi thong tin Production Deploy
+        run: |
+          echo "============================================"
+          echo " DEPLOYING TO: PRODUCTION ENVIRONMENT"
+          echo " Branch : ${{ github.ref_name }}"
+          echo " Commit : ${{ github.sha }}"
+          echo " Actor  : ${{ github.actor }}"
+          echo " Image  : ${{ env.IMAGE_NAME }}:latest"
+          echo "============================================"
+
+      # ----------------------------------------------------------
+      # Buoc 3: Dang nhap vao GitHub Container Registry
+      # ----------------------------------------------------------
+      - name: Dang nhap vao GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ----------------------------------------------------------
+      # Buoc 4: Thiet lap Docker Buildx
+      # ----------------------------------------------------------
+      - name: Thiet lap Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ----------------------------------------------------------
+      # Buoc 5: Build va Push image voi tag "latest" + sha
+      # ----------------------------------------------------------
+      - name: Build va Push Docker Image (Production)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:prod-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ----------------------------------------------------------
+      # Buoc 6: Mo phong deploy len server Production
+      # ----------------------------------------------------------
+      - name: Mo phong deploy len Production server
+        run: |
+          echo "[PRODUCTION] Pulling image: ${{ env.IMAGE_NAME }}:latest"
+          echo "[PRODUCTION] Running zero-downtime rolling update..."
+          echo "[PRODUCTION] Stopping old container..."
+          echo "[PRODUCTION] Starting new container..."
+          echo "[PRODUCTION] Health check: OK"
+          echo "[PRODUCTION] Deploy THANH CONG!"
